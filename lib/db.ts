@@ -22,14 +22,18 @@ export async function getAvailability(barberId: number, serviceId: number, from:
     WITH days AS (
       SELECT generate_series($3::date, $4::date, '1 day')::date AS appointment_date
     ), slots AS (
-      SELECT d.appointment_date, s.start_time,
-        (s.start_time + make_interval(mins => sv.duration_minutes))::time AS end_time
+      SELECT d.appointment_date, slot.start_time,
+        (slot.start_time + make_interval(mins => sv.duration_minutes))::time AS end_time
       FROM days d
       JOIN barber_availability s ON s.barber_id = $1 AND s.active = true
         AND s.weekday = EXTRACT(DOW FROM d.appointment_date)::int
       CROSS JOIN services sv
+      CROSS JOIN LATERAL generate_series(
+        GREATEST(s.start_time, '09:00'::time),
+        LEAST(s.end_time, '18:00'::time) - make_interval(mins => sv.duration_minutes),
+        '30 minutes'::interval
+      ) AS slot(start_time)
       WHERE sv.id = $2 AND sv.active = true
-        AND (s.start_time + make_interval(mins => sv.duration_minutes))::time <= s.end_time
     )
     SELECT to_char(slots.appointment_date, 'YYYY-MM-DD') AS date,
       to_char(slots.start_time, 'HH24:MI') AS time,
@@ -45,14 +49,14 @@ export async function getAvailability(barberId: number, serviceId: number, from:
   return result.rows
 }
 
-export async function createBooking(input: { barberId: number; serviceId: number; date: string; time: string; name: string; email: string; phone: string }) {
+export async function createBooking(input: { barberId: number; serviceId: number; date: string; time: string; name: string; email: string; phone: string; cancellationTokenHash?: string }) {
   const service = await pool.query('SELECT duration_minutes FROM services WHERE id = $1 AND active = true', [input.serviceId])
   if (!service.rowCount) throw new Error('Serviço indisponível')
   const duration = service.rows[0].duration_minutes
   const result = await pool.query(`INSERT INTO bookings
-    (barber_id, service_id, appointment_date, start_time, end_time, customer_name, customer_email, customer_phone)
-    VALUES ($1, $2, $3, $4, ($4::time + make_interval(mins => $5))::time, $6, $7, $8)
-    RETURNING id`, [input.barberId, input.serviceId, input.date, input.time, duration, input.name, input.email, input.phone])
+    (barber_id, service_id, appointment_date, start_time, end_time, customer_name, customer_email, customer_phone, cancellation_token_hash)
+    VALUES ($1, $2, $3, $4, ($4::time + make_interval(mins => $5))::time, $6, $7, $8, $9)
+    RETURNING id`, [input.barberId, input.serviceId, input.date, input.time, duration, input.name, input.email, input.phone, input.cancellationTokenHash ?? null])
   return result.rows[0].id as number
 }
 
