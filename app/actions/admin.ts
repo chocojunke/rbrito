@@ -54,4 +54,17 @@ export async function getAdminBookings() {
   return result.rows
 }
 export async function cancelAdminBooking(id: number) { if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado'); const result = await pool.query(`UPDATE bookings SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW() WHERE id = $1 AND status = 'confirmed' RETURNING customer_email AS email, customer_name AS name`, [id]); if (result.rowCount) await sendCancellationEmail(result.rows[0].email, result.rows[0].name).catch(() => undefined); return { success: true } }
-export async function updateAdminBooking(id: number, date: string, time: string) { if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado'); await pool.query(`UPDATE bookings SET appointment_date = $2, start_time = $3, updated_at = NOW() WHERE id = $1 AND status = 'confirmed'`, [id, date, time]); return { success: true } }
+export async function updateAdminBooking(id: number, date: string, time: string) { if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado'); await pool.query(`UPDATE bookings SET appointment_date = $2, start_time = $3, end_time = ($3::time + make_interval(mins => (SELECT duration_minutes FROM services WHERE id = bookings.service_id)))::time, updated_at = NOW() WHERE id = $1 AND status = 'confirmed'`, [id, date, time]); return { success: true } }
+
+export async function getAdminBlockers() {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  const result = await pool.query(`SELECT bl.id, to_char(bl.blocker_date, 'YYYY-MM-DD') AS date, to_char(bl.start_time, 'HH24:MI') AS time, to_char(bl.end_time, 'HH24:MI') AS end_time, bl.description AS name, bl.status, br.name AS barber, 'Bloqueio' AS service, EXTRACT(EPOCH FROM (bl.end_time - bl.start_time)) / 60 AS duration FROM blockers bl JOIN barbers br ON br.id = bl.barber_id WHERE bl.blocker_date >= CURRENT_DATE AND bl.status = 'active' ORDER BY bl.blocker_date, bl.start_time`)
+  return result.rows.map((row) => ({ ...row, kind: 'blocker' as const, email: '', phone: '' }))
+}
+
+export async function addAdminBlocker(input: { barberId: number; date: string; time: string; duration: number; description: string }) {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  if (!input.description.trim() || input.duration < 30 || input.duration % 30 !== 0) throw new Error('Dados do bloqueio inválidos')
+  const result = await pool.query(`INSERT INTO blockers (barber_id, blocker_date, start_time, end_time, description) VALUES ($1, $2, $3, ($3::time + make_interval(mins => $4))::time, $5) RETURNING id`, [input.barberId, input.date, input.time, input.duration, input.description.trim()])
+  return { success: true, id: result.rows[0].id }
+}

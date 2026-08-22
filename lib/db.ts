@@ -42,7 +42,14 @@ export async function getAvailability(barberId: number, serviceId: number, from:
     WHERE NOT EXISTS (
       SELECT 1 FROM bookings b
       WHERE b.barber_id = $1 AND b.appointment_date = slots.appointment_date
-        AND b.start_time = slots.start_time AND b.status = 'confirmed'
+        AND b.status = 'confirmed'
+        AND b.start_time < slots.end_time AND b.end_time > slots.start_time
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM blockers bl
+      WHERE bl.barber_id = $1 AND bl.blocker_date = slots.appointment_date
+        AND bl.status = 'active'
+        AND bl.start_time < slots.end_time AND bl.end_time > slots.start_time
     )
     ORDER BY slots.appointment_date, slots.start_time
   `, [barberId, serviceId, from, to])
@@ -53,6 +60,9 @@ export async function createBooking(input: { barberId: number; serviceId: number
   const service = await pool.query('SELECT duration_minutes FROM services WHERE id = $1 AND active = true', [input.serviceId])
   if (!service.rowCount) throw new Error('Serviço indisponível')
   const duration = service.rows[0].duration_minutes
+  const overlap = await pool.query(`SELECT 1 FROM bookings b WHERE b.barber_id = $1 AND b.appointment_date = $2 AND b.status = 'confirmed' AND b.start_time < ($3::time + make_interval(mins => $4))::time AND b.end_time > $3::time LIMIT 1`, [input.barberId, input.date, input.time, duration])
+  const blocked = await pool.query(`SELECT 1 FROM blockers bl WHERE bl.barber_id = $1 AND bl.blocker_date = $2 AND bl.status = 'active' AND bl.start_time < ($3::time + make_interval(mins => $4))::time AND bl.end_time > $3::time LIMIT 1`, [input.barberId, input.date, input.time, duration])
+  if (overlap.rowCount || blocked.rowCount) throw new Error('bookings_unique_slot')
   const result = await pool.query(`INSERT INTO bookings
     (barber_id, service_id, appointment_date, start_time, end_time, customer_name, customer_email, customer_phone, cancellation_token_hash)
     VALUES ($1, $2, $3, $4, ($4::time + make_interval(mins => $5))::time, $6, $7, $8, $9)
