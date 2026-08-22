@@ -43,6 +43,7 @@ export async function getAdminBookings() {
       b.customer_phone AS phone,
       b.status,
       s.name AS service,
+      s.duration_minutes AS duration,
       br.name AS barber
     FROM bookings b
     JOIN services s ON s.id = b.service_id
