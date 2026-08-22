@@ -1,7 +1,7 @@
 export const site = {
   name: 'RBrito Studio',
   // Substitua pelo seu link real de marcações (ex.: Treatwell, Fresha, etc.)
-  bookingUrl: 'https://www.fresha.com',
+  bookingUrl: '/marcacao',
   phone: '+351 912 345 678',
   phoneHref: 'tel:+351912345678',
   email: 'ola@rbritostudio.pt',
