@@ -31,6 +31,26 @@ export async function addNextMonthAvailability() {
   return { success: true, added: result.rowCount ?? 0 }
 }
 
-export async function getAdminBookings() { if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado'); const result = await pool.query(`SELECT b.id, b.appointment_date AS date, to_char(b.start_time, 'HH24:MI') AS time, b.customer_name AS name, b.customer_email AS email, b.customer_phone AS phone, b.status, s.name AS service, br.name AS barber FROM bookings b JOIN services s ON s.id = b.service_id JOIN barbers br ON br.id = b.barber_id WHERE b.appointment_date >= CURRENT_DATE ORDER BY b.appointment_date, b.start_time`); return result.rows }
+export async function getAdminBookings() {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  const result = await pool.query(`
+    SELECT
+      b.id,
+      to_char(b.appointment_date, 'YYYY-MM-DD') AS date,
+      to_char(b.start_time, 'HH24:MI') AS time,
+      b.customer_name AS name,
+      b.customer_email AS email,
+      b.customer_phone AS phone,
+      b.status,
+      s.name AS service,
+      br.name AS barber
+    FROM bookings b
+    JOIN services s ON s.id = b.service_id
+    JOIN barbers br ON br.id = b.barber_id
+    WHERE b.appointment_date >= CURRENT_DATE
+    ORDER BY b.appointment_date, b.start_time
+  `)
+  return result.rows
+}
 export async function cancelAdminBooking(id: number) { if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado'); const result = await pool.query(`UPDATE bookings SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW() WHERE id = $1 AND status = 'confirmed' RETURNING customer_email AS email, customer_name AS name`, [id]); if (result.rowCount) await sendCancellationEmail(result.rows[0].email, result.rows[0].name).catch(() => undefined); return { success: true } }
 export async function updateAdminBooking(id: number, date: string, time: string) { if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado'); await pool.query(`UPDATE bookings SET appointment_date = $2, start_time = $3, updated_at = NOW() WHERE id = $1 AND status = 'confirmed'`, [id, date, time]); return { success: true } }
