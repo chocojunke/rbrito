@@ -23,4 +23,4 @@ export const site = {
 } as const
 
 export const mapsEmbedUrl = `https://www.google.com/maps?q=${site.address.query}&z=17&output=embed`
-export const mapsLinkUrl = site.address.mapsShareUrl
+export const mapsLinkUrl = site.mapsShareUrl
