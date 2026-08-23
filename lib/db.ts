@@ -1,7 +1,22 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+function postgresConnectionString() {
+  const raw = process.env.DATABASE_URL
+  if (!raw) return raw
+  try {
+    const url = new URL(raw)
+    const sslmode = url.searchParams.get('sslmode')
+    if (sslmode === 'prefer' || sslmode === 'require' || sslmode === 'verify-ca') {
+      url.searchParams.set('sslmode', 'verify-full')
+    }
+    return url.toString()
+  } catch {
+    return raw
+  }
+}
+
+export const pool = new Pool({ connectionString: postgresConnectionString() })
 export const db = drizzle(pool)
 
 export type Barber = { id: number; name: string; role: string }
@@ -22,18 +37,18 @@ export async function getAvailability(barberId: number, serviceId: number, from:
     WITH days AS (
       SELECT generate_series($3::date, $4::date, '1 day')::date AS appointment_date
     ), slots AS (
-      SELECT d.appointment_date, slot.start_time,
-        (slot.start_time + make_interval(mins => sv.duration_minutes))::time AS end_time
+      SELECT d.appointment_date,
+        slot.slot_ts::time AS start_time,
+        (slot.slot_ts + make_interval(mins => sv.duration_minutes))::time AS end_time
       FROM days d
       JOIN barber_availability s ON s.barber_id = $1 AND s.active = true
         AND s.weekday = EXTRACT(DOW FROM d.appointment_date)::int
-      CROSS JOIN services sv
+      JOIN services sv ON sv.id = $2 AND sv.active = true
       CROSS JOIN LATERAL generate_series(
-        GREATEST(s.start_time, '09:00'::time),
-        LEAST(s.end_time, '18:00'::time) - make_interval(mins => sv.duration_minutes),
-        '30 minutes'::interval
-      ) AS slot(start_time)
-      WHERE sv.id = $2 AND sv.active = true
+        (DATE '2000-01-01' + s.start_time),
+        (DATE '2000-01-01' + s.end_time) - make_interval(mins => sv.duration_minutes),
+        INTERVAL '30 minutes'
+      ) AS slot(slot_ts)
     )
     SELECT to_char(slots.appointment_date, 'YYYY-MM-DD') AS date,
       to_char(slots.start_time, 'HH24:MI') AS time,

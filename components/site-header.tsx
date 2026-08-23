@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Scissors, Menu, X } from 'lucide-react'
+import { AccountButton } from '@/components/account-button'
 import { site } from '@/lib/site'
 import { cn } from '@/lib/utils'
 
@@ -53,6 +54,9 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <div className="hidden md:block">
+            <AccountButton />
+          </div>
           <a
             href={site.bookingUrl}
             target="_blank"
@@ -90,6 +94,9 @@ export function SiteHeader() {
                 </a>
               </li>
             ))}
+            <li className="pt-2">
+              <AccountButton />
+            </li>
             <li className="pt-2">
               <a
                 href={site.bookingUrl}

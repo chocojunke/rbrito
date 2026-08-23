@@ -1,30 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { addAdminBlocker, addNextMonthAvailability, adminLogin, cancelAdminBooking, getAdminBlockers, getAdminBookings, updateAdminBooking } from '@/app/actions/admin'
+import { AdminBookingEditor, type AdminBooking } from '@/components/admin-booking-editor'
 import { AdminCalendar } from '@/components/admin-calendar'
-
-type Booking = {
-  id: number
-  date: string
-  time: string
-  name: string
-  email: string
-  phone: string
-  status: string
-  service: string
-  barber: string
-  duration: number
-  kind?: 'booking' | 'blocker'
-}
 
 export default function AdminPage() {
   const [password, setPassword] = useState('')
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [logged, setLogged] = useState(false)
   const [error, setError] = useState('')
   const [availabilityMessage, setAvailabilityMessage] = useState('')
   const [addingAvailability, setAddingAvailability] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [editing, setEditing] = useState<AdminBooking | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   async function loadBookings() {
     const [confirmed, blockers] = await Promise.all([getAdminBookings(), getAdminBlockers()])
@@ -68,18 +62,31 @@ export default function AdminPage() {
       return
     }
 
+    setEditing(null)
     await loadBookings()
     setError('')
   }
 
-  async function edit(item: Booking) {
-    const date = window.prompt('Data (AAAA-MM-DD)', item.date)
-    const time = window.prompt('Hora (HH:MM)', item.time)
-    if (!date || !time) return
-
-    const result = await updateAdminBooking(item.id, date, time)
+  async function saveBooking(item: AdminBooking, input: { date: string; time: string; name: string; email: string; phone: string }) {
+    setSaving(true)
+    const result = await updateAdminBooking(item.id, input)
+    setSaving(false)
     if (!result.success) {
       setError(result.error)
+      return
+    }
+
+    setEditing(null)
+    await loadBookings()
+    setError('')
+  }
+
+  async function moveBooking(item: AdminBooking, date: string, time: string) {
+    if (item.kind === 'blocker') return
+    const result = await updateAdminBooking(item.id, { date, time, name: item.name, email: item.email, phone: item.phone })
+    if (!result.success) {
+      setError(result.error)
+      await loadBookings()
       return
     }
 
@@ -102,29 +109,41 @@ export default function AdminPage() {
   }
 
   if (!logged) {
-    return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
+    const formMarkup = (
+      <main suppressHydrationWarning className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
         <p className="text-sm uppercase tracking-widest text-primary">RBrito Studio</p>
         <h1 className="font-serif text-5xl uppercase">Painel admin</h1>
         <form onSubmit={login} className="flex flex-col gap-4">
           <label className="flex flex-col gap-2 text-sm">
             Password
-            <input autoFocus type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="min-h-12 rounded-sm border border-input bg-background px-4 py-3 text-base" />
+            <input autoFocus={!mounted ? false : true} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="min-h-12 rounded-sm border border-input bg-background px-4 py-3 text-base" />
           </label>
           {error && <p role="alert" className="text-destructive">{error}</p>}
           <button className="min-h-12 rounded-full bg-primary px-5 py-3 font-semibold text-primary-foreground">Entrar</button>
         </form>
       </main>
     )
+
+    if (!mounted) {
+      return (
+        <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
+          <p className="text-sm uppercase tracking-widest text-primary">RBrito Studio</p>
+          <h1 className="font-serif text-5xl uppercase">Painel admin</h1>
+          <div className="rounded-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">A preparar o painel...</div>
+        </main>
+      )
+    }
+
+    return formMarkup
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-16">
+    <main suppressHydrationWarning className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-16">
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-widest text-primary">Gestão de agenda</p>
           <h1 className="font-serif text-5xl uppercase">Marcações</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Uma vista semanal com cada marcação posicionada na hora respetiva e dimensionada de acordo com a duração do serviço.</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Arraste uma marcação para mudar o dia e a hora. Clique para editar os detalhes ou cancelar.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={addAvailability} disabled={addingAvailability} className="min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">
@@ -139,7 +158,23 @@ export default function AdminPage() {
       {availabilityMessage && <p role="status" className="mb-5 text-sm text-primary">{availabilityMessage}</p>}
       {error && <p role="alert" className="mb-5 text-sm text-destructive">{error}</p>}
 
-      <AdminCalendar bookings={bookings} onEdit={edit} onCancel={cancel} onAddBlocker={addBlocker} />
+      <AdminCalendar
+        bookings={bookings}
+        onEdit={(item) => { if (item.kind === 'blocker') return; setEditing(item) }}
+        onMove={moveBooking}
+        onCancel={cancel}
+        onAddBlocker={addBlocker}
+      />
+
+      {editing && (
+        <AdminBookingEditor
+          booking={editing}
+          saving={saving}
+          onClose={() => setEditing(null)}
+          onSave={(input) => saveBooking(editing, input)}
+          onCancelBooking={() => cancel(editing.id)}
+        />
+      )}
     </main>
   )
 }

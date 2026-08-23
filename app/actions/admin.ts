@@ -62,6 +62,8 @@ export async function getAdminBookings() {
         b.customer_email AS email,
         b.customer_phone AS phone,
         b.status,
+        b.barber_id AS "barberId",
+        b.service_id AS "serviceId",
         s.name AS service,
         s.duration_minutes AS duration,
         br.name AS barber
@@ -97,11 +99,55 @@ export async function cancelAdminBooking(id: number) {
   }
 }
 
-export async function updateAdminBooking(id: number, date: string, time: string) {
+export async function updateAdminBooking(
+  id: number,
+  input: { date: string; time: string; name?: string; email?: string; phone?: string },
+) {
   if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || !/^\d{2}:\d{2}/.test(input.time)) {
+    return { success: false, error: 'Data ou hora inválida.' }
+  }
+
+  const time = input.time.slice(0, 5)
 
   try {
-    await pool.query(`UPDATE bookings SET appointment_date = $2, start_time = $3, end_time = ($3::time + make_interval(mins => (SELECT duration_minutes FROM services WHERE id = bookings.service_id)))::time, updated_at = NOW() WHERE id = $1 AND status = 'confirmed'`, [id, date, time])
+    const booking = await pool.query(
+      `SELECT barber_id, service_id FROM bookings WHERE id = $1 AND status = 'confirmed'`,
+      [id],
+    )
+    if (!booking.rowCount) return { success: false, error: 'Marcação não encontrada.' }
+
+    const service = await pool.query('SELECT duration_minutes FROM services WHERE id = $1', [booking.rows[0].service_id])
+    const duration = service.rows[0]?.duration_minutes ?? 30
+    const overlap = await pool.query(
+      `SELECT 1 FROM bookings b
+       WHERE b.barber_id = $1 AND b.id <> $2 AND b.appointment_date = $3 AND b.status = 'confirmed'
+         AND b.start_time < ($4::time + make_interval(mins => $5))::time AND b.end_time > $4::time
+       LIMIT 1`,
+      [booking.rows[0].barber_id, id, input.date, time, duration],
+    )
+    if (overlap.rowCount) return { success: false, error: 'Esse horário já está ocupado.' }
+
+    await pool.query(
+      `UPDATE bookings SET
+         appointment_date = $2,
+         start_time = $3,
+         end_time = ($3::time + make_interval(mins => $4))::time,
+         customer_name = COALESCE($5, customer_name),
+         customer_email = COALESCE($6, customer_email),
+         customer_phone = COALESCE($7, customer_phone),
+         updated_at = NOW()
+       WHERE id = $1 AND status = 'confirmed'`,
+      [
+        id,
+        input.date,
+        time,
+        duration,
+        input.name?.trim() || null,
+        input.email?.trim().toLowerCase() || null,
+        input.phone?.trim() || null,
+      ],
+    )
     return { success: true }
   } catch (error) {
     console.error('updateAdminBooking failed:', error)
