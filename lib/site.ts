@@ -1,7 +1,7 @@
 export const site = {
   name: 'RBrito Studio',
   // Substitua pelo seu link real de marcações (ex.: Treatwell, Fresha, etc.)
-  bookingUrl: 'https://www.fresha.com',
+  bookingUrl: '/marcacao',
   phone: '+351 912 345 678',
   phoneHref: 'tel:+351912345678',
   email: 'ola@rbritostudio.pt',
@@ -23,4 +23,4 @@ export const site = {
 } as const
 
 export const mapsEmbedUrl = `https://www.google.com/maps?q=${site.address.query}&z=17&output=embed`
-export const mapsLinkUrl = site.address.mapsShareUrl
+export const mapsLinkUrl = site.mapsShareUrl
