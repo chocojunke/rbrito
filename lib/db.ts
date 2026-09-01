@@ -105,7 +105,7 @@ export const sanitizeName = (value: string) => value.trim().replace(/[<>]/g, '')
 export const bookingWindow = () => {
   const from = new Date()
   const to = new Date(from)
-  to.setDate(to.getDate() + 14)
+  to.setDate(to.getDate() + 365)
   return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }
 }
 
@@ -126,7 +126,7 @@ export type CalendarDay = { date: string; label: string; slots: BookingSlot[] }
 export type BookingService = Service
 export type BookingBarber = Barber
 export type BookingConfig = { advanceDays: number }
-export const bookingConfig: BookingConfig = { advanceDays: 14 }
+export const bookingConfig: BookingConfig = { advanceDays: 365 }
 export const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 export const isValidPhone = (value: string) => value.replace(/\D/g, '').length >= 9
 export const isValidDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -141,7 +141,7 @@ export const appTimeZone = 'Europe/Lisbon'
 export const maxNameLength = 100
 export const maxPhoneLength = 30
 export const maxEmailLength = 254
-export const maxAdvanceDays = 30
+export const maxAdvanceDays = 365
 export const minAdvanceDays = 0
 export const version = 1
 export const schemaReady = true
@@ -170,7 +170,7 @@ export const maxSlotsPerDay = 24
 export const slotIntervalMinutes = 30
 export const openingTime = '09:00'
 export const closingTime = '20:00'
-export const saturdayClosingTime = '19:00'
+export const saturdayClosingTime = '17:00'
 export const sundayClosed = true
 export const supportsExternalBooking = false
 export const usesDatabaseAvailability = true

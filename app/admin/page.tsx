@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addAdminBlocker, addNextMonthAvailability, adminLogin, cancelAdminBooking, getAdminBlockers, getAdminBookings, updateAdminBooking } from '@/app/actions/admin'
+import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBlockers, getAdminBookings, updateAdminBooking } from '@/app/actions/admin'
 import { AdminBookingEditor, type AdminBooking } from '@/components/admin-booking-editor'
 import { AdminCalendar } from '@/components/admin-calendar'
 
@@ -10,8 +10,6 @@ export default function AdminPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [logged, setLogged] = useState(false)
   const [error, setError] = useState('')
-  const [availabilityMessage, setAvailabilityMessage] = useState('')
-  const [addingAvailability, setAddingAvailability] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [editing, setEditing] = useState<AdminBooking | null>(null)
   const [saving, setSaving] = useState(false)
@@ -94,20 +92,6 @@ export default function AdminPage() {
     setError('')
   }
 
-  async function addAvailability() {
-    setAddingAvailability(true)
-    setAvailabilityMessage('')
-
-    try {
-      const result = await addNextMonthAvailability()
-      setAvailabilityMessage((result.added ?? 0) > 0 ? `Disponibilidade adicionada (${result.added ?? 0} períodos).` : 'A disponibilidade já estava configurada.')
-    } catch {
-      setAvailabilityMessage('Não foi possível atualizar a disponibilidade.')
-    } finally {
-      setAddingAvailability(false)
-    }
-  }
-
   if (!logged) {
     const formMarkup = (
       <main suppressHydrationWarning className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
@@ -146,16 +130,12 @@ export default function AdminPage() {
           <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Arraste uma marcação para mudar o dia e a hora. Clique para editar os detalhes ou cancelar.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button onClick={addAvailability} disabled={addingAvailability} className="min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60">
-            {addingAvailability ? 'A adicionar...' : 'Adicionar próximo mês'}
-          </button>
           <button onClick={loadBookings} className="flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm">
             <span aria-hidden>↻</span> Atualizar
           </button>
         </div>
       </div>
 
-      {availabilityMessage && <p role="status" className="mb-5 text-sm text-primary">{availabilityMessage}</p>}
       {error && <p role="alert" className="mb-5 text-sm text-destructive">{error}</p>}
 
       <AdminCalendar

@@ -1,7 +1,6 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Oswald, Inter } from 'next/font/google'
-import { AuthProvider } from '@/components/auth-provider'
 import './globals.css'
 
 const oswald = Oswald({
@@ -17,10 +16,14 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'RBrito Studio — Barbearia',
+  title: 'RBrito Studio - Barbearia',
   description:
-    'RBrito Studio — barbearia de referência. Cortes de precisão, barba e cuidados masculinos. Marque a sua sessão.',
-  generator: 'v0.app',
+    'RBrito Studio - barbearia de referência. Cortes de precisão, barba e cuidados masculinos. Marque a sua sessão.',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export const viewport: Viewport = {
@@ -36,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="pt" className={`dark bg-background ${oswald.variable} ${inter.variable}`}>
       <body className="font-sans antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
