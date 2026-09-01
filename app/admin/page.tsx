@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBlockers, getAdminBookings, updateAdminBooking } from '@/app/actions/admin'
+import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBarbers, getAdminBlockers, getAdminBookings, updateAdminBooking } from '@/app/actions/admin'
 import { AdminBookingEditor, type AdminBooking } from '@/components/admin-booking-editor'
 import { AdminCalendar } from '@/components/admin-calendar'
 
 export default function AdminPage() {
   const [password, setPassword] = useState('')
   const [bookings, setBookings] = useState<AdminBooking[]>([])
+  const [barbers, setBarbers] = useState<{ id: number; name: string; role: string }[]>([])
+  const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null)
   const [logged, setLogged] = useState(false)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -19,8 +21,9 @@ export default function AdminPage() {
   }, [])
 
   async function loadBookings() {
-    const [confirmed, blockers] = await Promise.all([getAdminBookings(), getAdminBlockers()])
+    const [confirmed, blockers, activeBarbers] = await Promise.all([getAdminBookings(), getAdminBlockers(), getAdminBarbers()])
     setBookings([...confirmed, ...blockers])
+    setBarbers(activeBarbers)
   }
 
   async function addBlocker(date: string, time: string) {
@@ -28,7 +31,7 @@ export default function AdminPage() {
     const duration = Number(window.prompt('Duração em minutos (30, 60, 90...)', '60'))
     if (!description || !duration) return
 
-    const barberId = Number(window.prompt('ID do barbeiro', '1'))
+    const barberId = selectedBarberId ?? Number(window.prompt('ID do barbeiro', String(barbers[0]?.id ?? '')))
     if (!barberId) return
 
     try {
@@ -56,7 +59,7 @@ export default function AdminPage() {
   async function cancel(id: number) {
     const result = await cancelAdminBooking(id)
     if (!result.success) {
-      setError(result.error)
+      setError(result.error ?? 'Não foi possível concluir a operação.')
       return
     }
 
@@ -70,7 +73,7 @@ export default function AdminPage() {
     const result = await updateAdminBooking(item.id, input)
     setSaving(false)
     if (!result.success) {
-      setError(result.error)
+      setError(result.error ?? 'Não foi possível concluir a operação.')
       return
     }
 
@@ -83,7 +86,7 @@ export default function AdminPage() {
     if (item.kind === 'blocker') return
     const result = await updateAdminBooking(item.id, { date, time, name: item.name, email: item.email, phone: item.phone })
     if (!result.success) {
-      setError(result.error)
+      setError(result.error ?? 'Não foi possível concluir a operação.')
       await loadBookings()
       return
     }
@@ -140,6 +143,9 @@ export default function AdminPage() {
 
       <AdminCalendar
         bookings={bookings}
+        barbers={barbers}
+        selectedBarberId={selectedBarberId}
+        onBarberChange={setSelectedBarberId}
         onEdit={(item) => { if (item.kind === 'blocker') return; setEditing(item) }}
         onMove={moveBooking}
         onCancel={cancel}

@@ -49,6 +49,19 @@ export async function addNextMonthAvailability() {
   return { success: true, added: result.rowCount ?? 0 }
 }
 
+export async function getAdminBarbers() {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+
+  const result = await pool.query(`
+    SELECT id, name, role
+    FROM barbers
+    WHERE active = true
+    ORDER BY name
+  `)
+
+  return result.rows as { id: number; name: string; role: string }[]
+}
+
 export async function getAdminBookings() {
   if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
 
@@ -166,6 +179,7 @@ export async function getAdminBlockers() {
       to_char(bl.end_time, 'HH24:MI') AS end_time,
       bl.description AS name,
       bl.status,
+      bl.barber_id AS "barberId",
       br.name AS barber,
       'Bloqueio' AS service,
       EXTRACT(EPOCH FROM (bl.end_time - bl.start_time)) / 60 AS duration

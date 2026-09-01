@@ -4,8 +4,13 @@ import { useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { AdminBooking } from '@/components/admin-booking-editor'
 
+type BarberOption = { id: number; name: string; role: string }
+
 type Props = {
   bookings: AdminBooking[]
+  barbers: BarberOption[]
+  selectedBarberId: number | null
+  onBarberChange: (id: number | null) => void
   onEdit: (booking: AdminBooking) => void
   onMove: (booking: AdminBooking, date: string, time: string) => void
   onCancel: (id: number) => void
@@ -58,7 +63,7 @@ function cardTop(time: string) {
   return ((hour - START_HOUR) * 60 + minute) / 30 * SLOT_HEIGHT
 }
 
-export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker }: Props) {
+export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberChange, onEdit, onMove, onCancel, onAddBlocker }: Props) {
   const [week, setWeek] = useState(() => mondayOf(new Date()))
   const [drag, setDrag] = useState<DragState | null>(null)
   const dragRef = useRef<DragState | null>(null)
@@ -70,6 +75,10 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
   }), [week])
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
   const range = `${formatDay(weekDays[0])} — ${formatDay(weekDays[5])}`
+  const visibleBookings = useMemo(
+    () => selectedBarberId === null ? bookings : bookings.filter((item) => item.barberId === selectedBarberId),
+    [bookings, selectedBarberId],
+  )
 
   function hitTest(clientX: number, clientY: number) {
     for (let index = 0; index < dayRefs.current.length; index += 1) {
@@ -136,7 +145,12 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
           <p className="text-xs uppercase tracking-[0.2em] text-primary">Agenda semanal</p>
           <h2 className="mt-1 font-serif text-2xl uppercase">{range}</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="barber-filter">Filtrar barbeiro</label>
+          <select id="barber-filter" value={selectedBarberId ?? ''} onChange={(event) => onBarberChange(event.target.value ? Number(event.target.value) : null)} className="min-h-11 rounded-full border border-border bg-background px-3 text-sm">
+            <option value="">Todos os barbeiros</option>
+            {barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
+          </select>
           <button aria-label="Semana anterior" onClick={() => { const next = new Date(week); next.setDate(next.getDate() - 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Semana anterior"><ChevronLeft /></button>
           <button onClick={() => setWeek(mondayOf(new Date()))} className="h-11 rounded-full border border-border px-4 text-sm">Hoje</button>
           <button aria-label="Próxima semana" onClick={() => { const next = new Date(week); next.setDate(next.getDate() + 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Próxima semana"><ChevronRight /></button>
@@ -182,7 +196,7 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
                     </div>
                   ))}
 
-                  {bookings
+                  {visibleBookings
                     .map(displayed)
                     .filter((item) => item.date === dateKey(day))
                     .map((item) => {
