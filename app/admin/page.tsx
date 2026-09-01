@@ -133,9 +133,6 @@ export default function AdminPage() {
           <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Arraste uma marcação para mudar o dia e a hora. Clique para editar os detalhes ou cancelar.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => window.alert('Botão temporário')} className="min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-            Botão temporário
-          </button>
           <button onClick={loadBookings} className="flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm">
             <span aria-hidden>↻</span> Atualizar
           </button>
