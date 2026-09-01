@@ -31,8 +31,6 @@ export function Contact() {
             </p>
             <a
               href={site.bookingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
               className="group mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90"
             >
               Marcar sessão

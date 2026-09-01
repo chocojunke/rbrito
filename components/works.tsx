@@ -26,8 +26,6 @@ export function Works() {
           </div>
           <a
             href={site.bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             className="group inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-foreground transition-colors hover:text-primary"
           >
             Quero o meu corte

@@ -97,6 +97,15 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
     setDrag(next)
   }
 
+  function onBookingPointerUp(event: React.PointerEvent<HTMLElement>, item: AdminBooking) {
+    const current = dragRef.current
+    if (!current || current.id !== item.id) {
+      onEdit(item)
+      return
+    }
+    endDrag(event, item)
+  }
+
   function moveDrag(event: React.PointerEvent<HTMLElement>) {
     const current = dragRef.current
     if (!current) return
@@ -188,7 +197,7 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
                           style={{ top: cardTop(item.time), height }}
                           onPointerDown={(event) => startDrag(event, original)}
                           onPointerMove={moveDrag}
-                          onPointerUp={(event) => endDrag(event, original)}
+                          onPointerUp={(event) => onBookingPointerUp(event, original)}
                           onPointerCancel={() => { dragRef.current = null; setDrag(null) }}
                           className={`absolute inset-x-1 overflow-hidden rounded-sm border p-2 text-xs shadow-sm touch-none ${
                             item.kind === 'blocker'

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Scissors, Menu, X } from 'lucide-react'
-import { AccountButton } from '@/components/account-button'
 import { site } from '@/lib/site'
 import { cn } from '@/lib/utils'
 
@@ -54,13 +53,8 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <div className="hidden md:block">
-            <AccountButton />
-          </div>
           <a
             href={site.bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
             className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90 md:inline-block"
           >
             Marcar
@@ -95,13 +89,8 @@ export function SiteHeader() {
               </li>
             ))}
             <li className="pt-2">
-              <AccountButton />
-            </li>
-            <li className="pt-2">
               <a
                 href={site.bookingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="block rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold uppercase tracking-widest text-primary-foreground"
               >
                 Marcar sessão

@@ -46,11 +46,12 @@ export function formatBookingDate(iso: string) {
   return `${weekday} ${day} ${month}`
 }
 
-export function BookingDateTime({ slots, selected, onSelect, loading = false, daysAhead = 14 }: Props) {
+export function BookingDateTime({ slots, selected, onSelect, loading = false, daysAhead = 365 }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null)
   const days = useMemo(() => {
-    const start = lisbonDateKey()
-    return Array.from({ length: daysAhead + 1 }, (_, index) => addDays(start, index))
+    const start = new Date(); start.setDate(start.getDate() + 1)
+    const startKey = lisbonDateKey(start)
+    return Array.from({ length: daysAhead }, (_, index) => addDays(startKey, index))
   }, [daysAhead])
 
   const slotsByDate = useMemo(() => {
