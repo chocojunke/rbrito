@@ -132,11 +132,6 @@ export default function AdminPage() {
           <h1 className="font-serif text-5xl uppercase">Marcações</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Arraste uma marcação para mudar o dia e a hora. Clique para editar os detalhes ou cancelar.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={loadBookings} className="flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-sm">
-            <span aria-hidden>↻</span> Atualizar
-          </button>
-        </div>
       </div>
 
       {error && <p role="alert" className="mb-5 text-sm text-destructive">{error}</p>}
