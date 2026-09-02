@@ -18,6 +18,18 @@ function lisbonDateKey(date = new Date()) {
   }).format(date)
 }
 
+function addDays(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  return lisbonDateKey(date)
+}
+
+function nextMonthStart(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`)
+  date.setMonth(date.getMonth() + 1, 1)
+  return lisbonDateKey(date)
+}
+
 export function BookingFlow({ barbers, services }: Props) {
   const [step, setStep] = useState(1)
   const [barberId, setBarberId] = useState<number | null>(null)
@@ -36,17 +48,46 @@ export function BookingFlow({ barbers, services }: Props) {
 
   useEffect(() => {
     if (!barberId || !serviceId) return
-    const fromDate = new Date(); fromDate.setDate(fromDate.getDate() + 1)
-    const toDate = new Date(); toDate.setDate(toDate.getDate() + 365)
-    const from = lisbonDateKey(fromDate)
-    const to = lisbonDateKey(toDate)
+    let active = true
+    const tomorrow = addDays(lisbonDateKey(), 1)
+    const lastDate = addDays(tomorrow, 364)
+
     setLoading(true)
     setError('')
     setSelected(null)
-    loadAvailableSlots(barberId, serviceId, from, to)
-      .then(setSlots)
-      .catch(() => setError('Não foi possível carregar as vagas.'))
-      .finally(() => setLoading(false))
+
+    async function loadAvailability() {
+      setSlots([])
+
+      async function loadRange(from: string, to: string) {
+        if (!active) return
+        try {
+          const nextSlots = await loadAvailableSlots(barberId, serviceId, from, to)
+          if (!active) return
+          setSlots((current) => [...current, ...nextSlots])
+        } catch {
+          if (active) setError('Não foi possível carregar as vagas.')
+        }
+      }
+
+      await loadRange(tomorrow, tomorrow)
+      if (!active) return
+      setLoading(false)
+
+      await loadRange(addDays(tomorrow, 1), addDays(tomorrow, 7))
+      await loadRange(addDays(tomorrow, 8), addDays(tomorrow, 14))
+
+      let monthFrom = addDays(tomorrow, 15)
+      while (active && monthFrom <= lastDate) {
+        const nextMonth = nextMonthStart(monthFrom)
+        const monthTo = nextMonth <= lastDate ? addDays(nextMonth, -1) : lastDate
+        await loadRange(monthFrom, monthTo)
+        monthFrom = nextMonth
+      }
+    }
+
+    void loadAvailability()
+    return () => { active = false }
   }, [barberId, serviceId])
 
   function handleSlotSelect(slot: Slot | null) {
