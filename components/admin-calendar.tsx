@@ -80,7 +80,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
   const range = `${formatDay(weekDays[0])} — ${formatDay(weekDays[5])}`
   const visibleBookings = useMemo(
-    () => selectedBarberId === null ? bookings : bookings.filter((item) => item.barberId === selectedBarberId),
+    () => selectedBarberId === null ? bookings : bookings.filter((item) => Number(item.barberId) === selectedBarberId),
     [bookings, selectedBarberId],
   )
 

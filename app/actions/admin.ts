@@ -95,6 +95,8 @@ export async function getAdminBookings() {
       ...row,
       date: normalizeDateValue(row.date),
       time: normalizeTimeValue(row.time),
+      barberId: Number(row.barberId),
+      serviceId: Number(row.serviceId),
     }))
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro desconhecido da base de dados.'
@@ -201,6 +203,7 @@ export async function getAdminBlockers() {
     date: normalizeDateValue(row.date),
     time: normalizeTimeValue(row.time),
     end_time: normalizeTimeValue(row.end_time),
+    barberId: Number(row.barberId),
   }))
 }
 
