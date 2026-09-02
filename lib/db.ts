@@ -47,7 +47,7 @@ export async function getAvailability(barberId: number, serviceId: number, from:
       CROSS JOIN LATERAL generate_series(
         (DATE '2000-01-01' + s.start_time),
         (DATE '2000-01-01' + s.end_time) - make_interval(mins => sv.duration_minutes),
-        INTERVAL '30 minutes'
+        INTERVAL '15 minutes'
       ) AS slot(slot_ts)
     )
     SELECT to_char(slots.appointment_date, 'YYYY-MM-DD') AS date,
