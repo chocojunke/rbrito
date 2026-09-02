@@ -63,6 +63,10 @@ function cardTop(time: string) {
   return ((hour - START_HOUR) * 60 + minute) / 30 * SLOT_HEIGHT
 }
 
+function bookingDateKey(value: string) {
+  return String(value).slice(0, 10)
+}
+
 export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberChange, onEdit, onMove, onCancel, onAddBlocker }: Props) {
   const [week, setWeek] = useState(() => mondayOf(new Date()))
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
@@ -219,7 +223,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
 
                   {visibleBookings
                     .map(displayed)
-                    .filter((item) => item.date === dateKey(day))
+                    .filter((item) => bookingDateKey(item.date) === dateKey(day))
                     .map((item) => {
                       const original = bookings.find((booking) => booking.id === item.id && booking.kind === item.kind) ?? item
                       const height = Math.max((item.duration || 30) / 30 * SLOT_HEIGHT - 3, 42)
