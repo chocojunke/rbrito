@@ -188,7 +188,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
             <div />
             <div className="col-span-1 grid grid-cols-1 md:col-span-6 md:grid-cols-6">
               {weekDays.map((day, index) => (
-                <div key={dateKey(day)} className={`hidden border-l border-border px-2 py-3 text-center md:block ${index === mobileDayIndex ? 'block' : ''} ${dateKey(day) === dateKey(new Date()) ? 'bg-primary/10' : ''}`}>
+                <div key={dateKey(day)} className={`border-l border-border px-2 py-3 text-center md:block ${index === mobileDayIndex ? '!block' : '!hidden'} ${dateKey(day) === dateKey(new Date()) ? 'bg-primary/10' : ''}`}>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">{days[index]}</p>
                   <p className="mt-1 font-semibold">{formatDay(day)}</p>
                 </div>
@@ -208,7 +208,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
                 <div
                   key={dateKey(day)}
                   ref={(node) => { dayRefs.current[index] = node }}
-                  className={`relative min-h-[72rem] hidden border-l border-border md:block ${index === mobileDayIndex ? 'block' : ''}`}
+                  className={`relative min-h-[72rem] border-l border-border md:block ${index === mobileDayIndex ? '!block' : '!hidden'}`}
                 >
                   {hours.map((hour) => (
                     <div
