@@ -204,7 +204,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
                 <div
                   key={dateKey(day)}
                   ref={(node) => { dayRefs.current[index] = node }}
-                  className={`relative hidden border-l border-border md:block ${index === mobileDayIndex ? 'block' : ''}`}
+                  className={`relative min-h-[72rem] hidden border-l border-border md:block ${index === mobileDayIndex ? 'block' : ''}`}
                 >
                   {hours.map((hour) => (
                     <div
