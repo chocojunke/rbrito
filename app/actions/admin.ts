@@ -14,6 +14,10 @@ export async function adminLogin(password: string) {
 
 export async function adminLogout() { (await cookies()).delete('rbrito-admin') }
 
+export async function getAdminSession() {
+  return (await cookies()).get('rbrito-admin')?.value === '1'
+}
+
 function normalizeDateValue(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
   return String(value ?? '')

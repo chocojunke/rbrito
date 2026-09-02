@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBarbers, getAdminBlockers, getAdminBookings, updateAdminBooking } from '@/app/actions/admin'
+import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBarbers, getAdminBlockers, getAdminBookings, getAdminSession, updateAdminBooking } from '@/app/actions/admin'
 import { AdminBookingEditor, type AdminBooking } from '@/components/admin-booking-editor'
 import { AdminCalendar } from '@/components/admin-calendar'
 
@@ -17,7 +17,24 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    let active = true
+
+    async function restoreSession() {
+      const isAdmin = await getAdminSession()
+      if (!active) return
+      setLogged(isAdmin)
+      setMounted(true)
+      if (isAdmin) {
+        try {
+          await loadBookings()
+        } catch {
+          setError('Não foi possível carregar a agenda.')
+        }
+      }
+    }
+
+    void restoreSession()
+    return () => { active = false }
   }, [])
 
   async function loadBookings() {
