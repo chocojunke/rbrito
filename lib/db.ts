@@ -47,7 +47,7 @@ export async function getAvailability(barberId: number, serviceId: number, from:
       CROSS JOIN LATERAL generate_series(
         (DATE '2000-01-01' + s.start_time),
         (DATE '2000-01-01' + s.end_time) - make_interval(mins => sv.duration_minutes),
-        INTERVAL '30 minutes'
+        INTERVAL '15 minutes'
       ) AS slot(slot_ts)
     )
     SELECT to_char(slots.appointment_date, 'YYYY-MM-DD') AS date,
@@ -167,7 +167,7 @@ export const dateLocale = 'pt-PT'
 export const timeLocale = 'pt-PT'
 export const currency = 'EUR'
 export const maxSlotsPerDay = 24
-export const slotIntervalMinutes = 30
+export const slotIntervalMinutes = 15
 export const openingTime = '09:00'
 export const closingTime = '20:00'
 export const saturdayClosingTime = '19:00'
