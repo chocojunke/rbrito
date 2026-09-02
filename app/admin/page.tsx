@@ -6,11 +6,9 @@ import { AdminBookingEditor, type AdminBooking } from '@/components/admin-bookin
 import { AdminCalendar } from '@/components/admin-calendar'
 
 export default function AdminPage() {
-  const [password, setPassword] = useState('')
   const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [barbers, setBarbers] = useState<{ id: number; name: string; role: string }[]>([])
   const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null)
-  const [logged, setLogged] = useState(false)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
   const [editing, setEditing] = useState<AdminBooking | null>(null)
@@ -20,14 +18,15 @@ export default function AdminPage() {
     let active = true
 
     async function restoreSession() {
-      const isAdmin = await getAdminSession()
-      if (!active) return
-      setLogged(isAdmin)
-      setMounted(true)
-      if (isAdmin) {
-        try {
-          await loadBookings()
-        } catch {
+      try {
+        const isAdmin = await getAdminSession()
+        if (!isAdmin) await adminLogin()
+        if (!active) return
+        setMounted(true)
+        await loadBookings()
+      } catch {
+        if (active) {
+          setMounted(true)
           setError('Não foi possível carregar a agenda.')
         }
       }
@@ -57,20 +56,6 @@ export default function AdminPage() {
     } catch {
       setError('Não foi possível adicionar o bloqueio.')
     }
-  }
-
-  async function login(event: React.FormEvent) {
-    event.preventDefault()
-    setError('')
-
-    const result = await adminLogin(password)
-    if (result.success) {
-      setLogged(true)
-      await loadBookings()
-      return
-    }
-
-    setError(result.error ?? 'Não foi possível iniciar sessão.')
   }
 
   async function cancel(id: number) {
@@ -112,33 +97,14 @@ export default function AdminPage() {
     setError('')
   }
 
-  if (!logged) {
-    const formMarkup = (
-      <main suppressHydrationWarning className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
+  if (!mounted) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
         <p className="text-sm uppercase tracking-widest text-primary">RBrito Studio</p>
         <h1 className="font-serif text-5xl uppercase">Painel admin</h1>
-        <form onSubmit={login} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-2 text-sm">
-            Password
-            <input autoFocus={!mounted ? false : true} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="min-h-12 rounded-sm border border-input bg-background px-4 py-3 text-base" />
-          </label>
-          {error && <p role="alert" className="text-destructive">{error}</p>}
-          <button className="min-h-12 rounded-full bg-primary px-5 py-3 font-semibold text-primary-foreground">Entrar</button>
-        </form>
+        <div className="rounded-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">A preparar o painel...</div>
       </main>
     )
-
-    if (!mounted) {
-      return (
-        <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-6">
-          <p className="text-sm uppercase tracking-widest text-primary">RBrito Studio</p>
-          <h1 className="font-serif text-5xl uppercase">Painel admin</h1>
-          <div className="rounded-sm border border-border bg-background px-4 py-3 text-sm text-muted-foreground">A preparar o painel...</div>
-        </main>
-      )
-    }
-
-    return formMarkup
   }
 
   return (

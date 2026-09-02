@@ -3,10 +3,7 @@ import { cookies } from 'next/headers'
 import { pool } from '@/lib/db'
 import { sendCancellationEmail } from '@/lib/booking-email'
 
-export async function adminLogin(password: string) {
-  if (!process.env.ADMIN_BOOKING_PASSWORD) return { error: 'Variável ADMIN_BOOKING_PASSWORD não configurada.' }
-  if (password !== process.env.ADMIN_BOOKING_PASSWORD) return { error: 'Password incorreta.' }
-
+export async function adminLogin() {
   const isProd = process.env.NODE_ENV === 'production'
   ;(await cookies()).set('rbrito-admin', '1', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 })
   return { success: true }
