@@ -10,6 +10,7 @@ export type AdminBooking = {
   status: string
   service: string
   barber: string
+  barberId: number
   duration: number
   kind?: 'booking' | 'blocker'
 }

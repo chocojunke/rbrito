@@ -3,16 +3,17 @@ import { cookies } from 'next/headers'
 import { pool } from '@/lib/db'
 import { sendCancellationEmail } from '@/lib/booking-email'
 
-export async function adminLogin(password: string) {
-  if (!process.env.ADMIN_BOOKING_PASSWORD) return { error: 'Variável ADMIN_BOOKING_PASSWORD não configurada.' }
-  if (password !== process.env.ADMIN_BOOKING_PASSWORD) return { error: 'Password incorreta.' }
-
+export async function adminLogin() {
   const isProd = process.env.NODE_ENV === 'production'
   ;(await cookies()).set('rbrito-admin', '1', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 })
   return { success: true }
 }
 
 export async function adminLogout() { (await cookies()).delete('rbrito-admin') }
+
+export async function getAdminSession() {
+  return (await cookies()).get('rbrito-admin')?.value === '1'
+}
 
 function normalizeDateValue(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
@@ -49,6 +50,19 @@ export async function addNextMonthAvailability() {
   return { success: true, added: result.rowCount ?? 0 }
 }
 
+export async function getAdminBarbers() {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+
+  const result = await pool.query(`
+    SELECT id, name, role
+    FROM barbers
+    WHERE active = true
+    ORDER BY name
+  `)
+
+  return result.rows as { id: number; name: string; role: string }[]
+}
+
 export async function getAdminBookings() {
   if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
 
@@ -78,6 +92,8 @@ export async function getAdminBookings() {
       ...row,
       date: normalizeDateValue(row.date),
       time: normalizeTimeValue(row.time),
+      barberId: Number(row.barberId),
+      serviceId: Number(row.serviceId),
     }))
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Erro desconhecido da base de dados.'
@@ -166,6 +182,7 @@ export async function getAdminBlockers() {
       to_char(bl.end_time, 'HH24:MI') AS end_time,
       bl.description AS name,
       bl.status,
+      bl.barber_id AS "barberId",
       br.name AS barber,
       'Bloqueio' AS service,
       EXTRACT(EPOCH FROM (bl.end_time - bl.start_time)) / 60 AS duration
@@ -183,6 +200,7 @@ export async function getAdminBlockers() {
     date: normalizeDateValue(row.date),
     time: normalizeTimeValue(row.time),
     end_time: normalizeTimeValue(row.end_time),
+    barberId: Number(row.barberId),
   }))
 }
 

@@ -4,8 +4,13 @@ import { useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { AdminBooking } from '@/components/admin-booking-editor'
 
+type BarberOption = { id: number; name: string; role: string }
+
 type Props = {
   bookings: AdminBooking[]
+  barbers: BarberOption[]
+  selectedBarberId: number | null
+  onBarberChange: (id: number | null) => void
   onEdit: (booking: AdminBooking) => void
   onMove: (booking: AdminBooking, date: string, time: string) => void
   onCancel: (id: number) => void
@@ -58,8 +63,16 @@ function cardTop(time: string) {
   return ((hour - START_HOUR) * 60 + minute) / 30 * SLOT_HEIGHT
 }
 
-export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker }: Props) {
+function bookingDateKey(value: string) {
+  return String(value).slice(0, 10)
+}
+
+export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberChange, onEdit, onMove, onCancel, onAddBlocker }: Props) {
   const [week, setWeek] = useState(() => mondayOf(new Date()))
+  const [mobileDayIndex, setMobileDayIndex] = useState(() => {
+    const day = new Date().getDay()
+    return day === 0 ? 5 : Math.min(day - 1, 5)
+  })
   const [drag, setDrag] = useState<DragState | null>(null)
   const dragRef = useRef<DragState | null>(null)
   const dayRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -70,6 +83,10 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
   }), [week])
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i)
   const range = `${formatDay(weekDays[0])} — ${formatDay(weekDays[5])}`
+  const visibleBookings = useMemo(
+    () => selectedBarberId === null ? bookings : bookings.filter((item) => Number(item.barberId) === selectedBarberId),
+    [bookings, selectedBarberId],
+  )
 
   function hitTest(clientX: number, clientY: number) {
     for (let index = 0; index < dayRefs.current.length; index += 1) {
@@ -136,20 +153,42 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
           <p className="text-xs uppercase tracking-[0.2em] text-primary">Agenda semanal</p>
           <h2 className="mt-1 font-serif text-2xl uppercase">{range}</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
+          <label className="sr-only" htmlFor="barber-filter">Filtrar barbeiro</label>
+          <select id="barber-filter" value={selectedBarberId ?? ''} onChange={(event) => onBarberChange(event.target.value ? Number(event.target.value) : null)} className="min-h-11 rounded-full border border-border bg-background px-3 text-sm">
+            <option value="">Todos os barbeiros</option>
+            {barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
+          </select>
           <button aria-label="Semana anterior" onClick={() => { const next = new Date(week); next.setDate(next.getDate() - 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Semana anterior"><ChevronLeft /></button>
           <button onClick={() => setWeek(mondayOf(new Date()))} className="h-11 rounded-full border border-border px-4 text-sm">Hoje</button>
           <button aria-label="Próxima semana" onClick={() => { const next = new Date(week); next.setDate(next.getDate() + 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Próxima semana"><ChevronRight /></button>
         </div>
       </div>
 
+      <div className="border-b border-border px-3 py-3 md:hidden">
+        <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+          {weekDays.map((day, index) => (
+            <button
+              key={dateKey(day)}
+              type="button"
+              onClick={() => setMobileDayIndex(index)}
+              aria-pressed={mobileDayIndex === index}
+              className={`min-h-11 min-w-20 snap-start rounded-full border px-3 text-xs ${mobileDayIndex === index ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}
+            >
+              <span className="block uppercase tracking-wider">{days[index]}</span>
+              <span className="font-semibold">{formatDay(day)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
-        <div className="min-w-[760px]">
-          <div className="grid grid-cols-[64px_repeat(6,minmax(110px,1fr))] border-b border-border">
+        <div className="min-w-0 md:min-w-[760px]">
+          <div className="grid grid-cols-[52px_minmax(0,1fr)] md:grid-cols-[64px_repeat(6,minmax(110px,1fr))] border-b border-border">
             <div />
-            <div className="col-span-6 grid grid-cols-6">
+            <div className="col-span-1 grid grid-cols-1 md:col-span-6 md:grid-cols-6">
               {weekDays.map((day, index) => (
-                <div key={dateKey(day)} className={`border-l border-border px-2 py-3 text-center ${dateKey(day) === dateKey(new Date()) ? 'bg-primary/10' : ''}`}>
+                <div key={dateKey(day)} className={`border-l border-border px-2 py-3 text-center md:block ${index === mobileDayIndex ? '!block' : '!hidden'} ${dateKey(day) === dateKey(new Date()) ? 'bg-primary/10' : ''}`}>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">{days[index]}</p>
                   <p className="mt-1 font-semibold">{formatDay(day)}</p>
                 </div>
@@ -157,19 +196,19 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
             </div>
           </div>
 
-          <div className="grid grid-cols-[64px_repeat(6,minmax(110px,1fr))]">
+          <div className="grid grid-cols-[52px_minmax(0,1fr)] md:grid-cols-[64px_repeat(6,minmax(110px,1fr))]">
             <div className="relative">
               {hours.map((hour) => (
                 <div key={hour} className="h-24 border-b border-border pr-2 pt-1 text-right text-[11px] text-muted-foreground">{String(hour).padStart(2, '0')}:00</div>
               ))}
             </div>
 
-            <div className="col-span-6 grid grid-cols-6">
+            <div className="col-span-1 grid grid-cols-1 md:col-span-6 md:grid-cols-6">
               {weekDays.map((day, index) => (
                 <div
                   key={dateKey(day)}
                   ref={(node) => { dayRefs.current[index] = node }}
-                  className="relative border-l border-border"
+                  className={`relative min-h-[72rem] border-l border-border md:block ${index === mobileDayIndex ? '!block' : '!hidden'}`}
                 >
                   {hours.map((hour) => (
                     <div
@@ -182,9 +221,9 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
                     </div>
                   ))}
 
-                  {bookings
+                  {visibleBookings
                     .map(displayed)
-                    .filter((item) => item.date === dateKey(day))
+                    .filter((item) => bookingDateKey(item.date) === dateKey(day))
                     .map((item) => {
                       const original = bookings.find((booking) => booking.id === item.id && booking.kind === item.kind) ?? item
                       const height = Math.max((item.duration || 30) / 30 * SLOT_HEIGHT - 3, 42)
@@ -242,10 +281,12 @@ export function AdminCalendar({ bookings, onEdit, onMove, onCancel, onAddBlocker
         </div>
       </div>
 
-      <div className="flex items-center gap-4 border-t border-border px-4 py-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-2"><i className="size-2 rounded-full bg-primary" />Confirmada</span>
-        <span className="flex items-center gap-2"><i className="size-2 rounded-full bg-destructive" />Cancelada</span>
-        <span className="ml-auto">Arrastar para mudar data/hora · 09:00 — 20:00</span>
+      <div className="flex flex-col gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-2"><i className="size-2 rounded-full bg-primary" />Confirmada</span>
+          <span className="flex items-center gap-2"><i className="size-2 rounded-full bg-destructive" />Cancelada</span>
+        </div>
+        <span className="sm:ml-auto">Arrastar para mudar data/hora · 09:00 — 20:00</span>
       </div>
     </section>
   )
