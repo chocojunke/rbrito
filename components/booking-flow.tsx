@@ -49,6 +49,8 @@ export function BookingFlow({ barbers, services }: Props) {
   useEffect(() => {
     if (!barberId || !serviceId) return
     let active = true
+    const selectedBarberId = barberId
+    const selectedServiceId = serviceId
     const tomorrow = addDays(lisbonDateKey(), 1)
     const lastDate = addDays(tomorrow, 364)
 
@@ -62,7 +64,7 @@ export function BookingFlow({ barbers, services }: Props) {
       async function loadRange(from: string, to: string) {
         if (!active) return
         try {
-          const nextSlots = await loadAvailableSlots(barberId, serviceId, from, to)
+          const nextSlots = await loadAvailableSlots(selectedBarberId, selectedServiceId, from, to)
           if (!active) return
           setSlots((current) => [...current, ...nextSlots])
         } catch {
@@ -105,7 +107,7 @@ export function BookingFlow({ barbers, services }: Props) {
     setLoading(false)
   }
 
-  if (success) return <div className="flex flex-col items-center gap-5 py-16 text-center"><span className="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check aria-hidden="true" /></span><h2 className="font-serif text-4xl uppercase">Marcação confirmada</h2><p className="max-w-md text-muted-foreground">Obrigado, {customer.name}. Enviámos os detalhes da sua sessão para {customer.email}.</p><a href="/#marcacao" className="mt-3 rounded-full border border-border px-6 py-3 text-sm font-semibold uppercase tracking-widest hover:bg-secondary">Voltar ao estúdio</a></div>
+  if (success) return <div className="flex flex-col items-center gap-5 py-16 text-center"><span className="flex size-16 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check aria-hidden="true" /></span><h2 className="font-serif text-4xl uppercase">Marcação confirmada</h2><p className="max-w-md text-muted-foreground">Obrigado, {customer.name}. Enviámos os detalhes da sua sessão para {customer.email}.</p><a href="/#booking" className="mt-3 rounded-full border border-border px-6 py-3 text-sm font-semibold uppercase tracking-widest hover:bg-secondary">Voltar ao estúdio</a></div>
 
   return <div className="mx-auto max-w-3xl">
     <div className="mb-10 flex items-center justify-between border-b border-border pb-5 text-xs font-semibold uppercase tracking-widest text-muted-foreground"><span className={step >= 1 ? 'text-primary' : ''}>01 Barbeiro</span><span className={step >= 2 ? 'text-primary' : ''}>02 Serviço</span><span className={step >= 3 ? 'text-primary' : ''}>03 Horário</span><span className={step >= 4 ? 'text-primary' : ''}>04 Dados</span></div>
