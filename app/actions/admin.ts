@@ -135,15 +135,6 @@ export async function updateAdminBooking(
 
     const service = await pool.query('SELECT duration_minutes FROM services WHERE id = $1', [booking.rows[0].service_id])
     const duration = service.rows[0]?.duration_minutes ?? 30
-    const overlap = await pool.query(
-      `SELECT 1 FROM bookings b
-       WHERE b.barber_id = $1 AND b.id <> $2 AND b.appointment_date = $3 AND b.status = 'confirmed'
-         AND b.start_time < ($4::time + make_interval(mins => $5))::time AND b.end_time > $4::time
-       LIMIT 1`,
-      [booking.rows[0].barber_id, id, input.date, time, duration],
-    )
-    if (overlap.rowCount) return { success: false, error: 'Esse horário já está ocupado.' }
-
     await pool.query(
       `UPDATE bookings SET
          appointment_date = $2,
