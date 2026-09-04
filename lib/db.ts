@@ -43,7 +43,8 @@ export async function getAvailability(barberId: number, serviceId: number, from:
       FROM days d
       JOIN services sv ON sv.id = $2 AND sv.active = true
       LEFT JOIN barber_availability_exceptions ex ON ex.barber_id = $1
-        AND ex.exception_date = d.appointment_date AND ex.active = true
+        AND COALESCE(ex.start_date, ex.exception_date) <= d.appointment_date
+        AND ex.exception_date >= d.appointment_date AND ex.active = true
       JOIN barber_availability s ON s.barber_id = $1 AND s.active = true
         AND s.weekday = EXTRACT(DOW FROM d.appointment_date)::int
         AND ex.id IS NULL
@@ -58,7 +59,8 @@ export async function getAvailability(barberId: number, serviceId: number, from:
         (slot.slot_ts + make_interval(mins => sv.duration_minutes))::time AS end_time
       FROM days d
       JOIN barber_availability_exceptions ex ON ex.barber_id = $1
-        AND ex.exception_date = d.appointment_date AND ex.active = true
+        AND COALESCE(ex.start_date, ex.exception_date) <= d.appointment_date
+        AND ex.exception_date >= d.appointment_date AND ex.active = true
         AND ex.start_time IS NOT NULL AND ex.end_time IS NOT NULL
       JOIN services sv ON sv.id = $2 AND sv.active = true
       CROSS JOIN LATERAL generate_series(
@@ -95,13 +97,17 @@ export async function createBooking(input: { barberId: number; serviceId: number
   const schedule = await pool.query(`
     SELECT 1
     FROM barber_availability_exceptions ex
-    WHERE ex.barber_id = $1 AND ex.exception_date = $2 AND ex.active = true
+    WHERE ex.barber_id = $1
+      AND COALESCE(ex.start_date, ex.exception_date) <= $2::date
+      AND ex.exception_date >= $2::date AND ex.active = true
       AND (ex.start_time IS NULL OR (ex.start_time <= $3::time AND ex.end_time >= ($3::time + make_interval(mins => $4))::time))
     UNION ALL
     SELECT 1
     FROM barber_availability s
     WHERE s.barber_id = $1 AND s.weekday = EXTRACT(DOW FROM $2::date)::int AND s.active = true
-      AND NOT EXISTS (SELECT 1 FROM barber_availability_exceptions ex WHERE ex.barber_id = $1 AND ex.exception_date = $2 AND ex.active = true)
+      AND NOT EXISTS (SELECT 1 FROM barber_availability_exceptions ex WHERE ex.barber_id = $1
+      AND COALESCE(ex.start_date, ex.exception_date) <= $2::date
+      AND ex.exception_date >= $2::date AND ex.active = true)
       AND s.start_time <= $3::time AND s.end_time >= ($3::time + make_interval(mins => $4))::time
     LIMIT 1
   `, [input.barberId, input.date, input.time, duration])
