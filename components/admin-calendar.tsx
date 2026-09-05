@@ -147,7 +147,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
   }
 
   return (
-    <section className="overflow-hidden rounded-sm border border-border bg-card shadow-sm">
+    <section className="select-none overflow-hidden rounded-sm border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-primary">Agenda semanal</p>
