@@ -12,6 +12,7 @@ export type AdminBooking = {
   barber: string
   barberId: number
   duration: number
+  isFirstBooking?: boolean
   kind?: 'booking' | 'blocker'
 }
 
