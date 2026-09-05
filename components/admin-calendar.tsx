@@ -147,7 +147,7 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
   }
 
   return (
-    <section className="overflow-hidden rounded-sm border border-border bg-card shadow-sm">
+    <section className="select-none overflow-hidden rounded-sm border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-primary">Agenda semanal</p>
@@ -256,6 +256,11 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
                           </div>
                           <p className="mt-1 truncate text-foreground">{item.service}</p>
                           <p className="truncate text-muted-foreground">{item.barber}</p>
+                          {item.kind !== 'blocker' && item.isFirstBooking && (
+                            <span className="mt-1 inline-flex max-w-full truncate rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+                              Primeira marcação
+                            </span>
+                          )}
 
                           {!cancelled && item.kind !== 'blocker' && (
                             <div className="mt-2 flex gap-1">

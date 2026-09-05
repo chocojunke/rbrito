@@ -80,7 +80,17 @@ export async function getAdminBookings() {
         b.service_id AS "serviceId",
         s.name AS service,
         s.duration_minutes AS duration,
-        br.name AS barber
+        br.name AS barber,
+        CASE WHEN b.customer_email IS NOT NULL AND b.customer_phone IS NOT NULL AND NOT EXISTS (
+          SELECT 1
+          FROM bookings previous
+          WHERE previous.status = 'confirmed'
+            AND previous.customer_email IS NOT NULL
+            AND previous.customer_phone IS NOT NULL
+            AND LOWER(TRIM(previous.customer_email)) = LOWER(TRIM(b.customer_email))
+            AND regexp_replace(previous.customer_phone, '\\D', '', 'g') = regexp_replace(b.customer_phone, '\\D', '', 'g')
+            AND (previous.appointment_date, previous.start_time, previous.id) < (b.appointment_date, b.start_time, b.id)
+        ) THEN true ELSE false END AS "isFirstBooking"
       FROM bookings b
       JOIN services s ON s.id = b.service_id
       JOIN barbers br ON br.id = b.barber_id
