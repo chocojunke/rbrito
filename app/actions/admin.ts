@@ -195,6 +195,27 @@ export async function getAdminBlockers() {
   }))
 }
 
+export async function getAdminExceptions() {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  const result = await pool.query(`SELECT ex.id, ex.barber_id AS "barberId", br.name AS barber, to_char(COALESCE(ex.start_date, ex.exception_date), 'YYYY-MM-DD') AS "startDate", to_char(ex.exception_date, 'YYYY-MM-DD') AS "endDate", to_char(ex.start_time, 'HH24:MI') AS "startTime", to_char(ex.end_time, 'HH24:MI') AS "endTime", ex.description FROM barber_availability_exceptions ex JOIN barbers br ON br.id = ex.barber_id WHERE ex.active = true AND ex.exception_date >= CURRENT_DATE ORDER BY COALESCE(ex.start_date, ex.exception_date), ex.start_time NULLS FIRST`)
+  return result.rows.map((row) => ({ ...row, barberId: Number(row.barberId), startDate: normalizeDateValue(row.startDate), endDate: normalizeDateValue(row.endDate), startTime: normalizeTimeValue(row.startTime), endTime: normalizeTimeValue(row.endTime) }))
+}
+
+export async function addAdminException(input: { barberId: number; startDate: string; endDate: string; startTime?: string; endTime?: string; description: string }) {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  if (!Number.isInteger(input.barberId) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(input.startDate) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(input.endDate) || input.startDate > input.endDate || !input.description.trim()) throw new Error('Dados da exceção inválidos')
+  const closed = !input.startTime && !input.endTime
+  if (!closed && (!/^\\d{2}:\\d{2}$/.test(input.startTime ?? '') || !/^\\d{2}:\\d{2}$/.test(input.endTime ?? '') || input.startTime! >= input.endTime!)) throw new Error('Horário da exceção inválido')
+  const result = await pool.query(`INSERT INTO barber_availability_exceptions (barber_id, exception_date, start_date, start_time, end_time, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, [input.barberId, input.endDate, input.startDate, closed ? null : input.startTime, closed ? null : input.endTime, input.description.trim()])
+  return { success: true, id: result.rows[0].id as number }
+}
+
+export async function deleteAdminException(id: number) {
+  if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
+  await pool.query('UPDATE barber_availability_exceptions SET active = false, updated_at = NOW() WHERE id = $1', [id])
+  return { success: true }
+}
+
 export async function addAdminBlocker(input: { barberId: number; date: string; time: string; duration: number; description: string }) {
   if ((await cookies()).get('rbrito-admin')?.value !== '1') throw new Error('Não autorizado')
   if (!input.description.trim() || input.duration < 30 || input.duration % 30 !== 0) throw new Error('Dados do bloqueio inválidos')

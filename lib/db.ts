@@ -41,12 +41,31 @@ export async function getAvailability(barberId: number, serviceId: number, from:
         slot.slot_ts::time AS start_time,
         (slot.slot_ts + make_interval(mins => sv.duration_minutes))::time AS end_time
       FROM days d
+      JOIN services sv ON sv.id = $2 AND sv.active = true
+      LEFT JOIN barber_availability_exceptions ex ON ex.barber_id = $1
+        AND COALESCE(ex.start_date, ex.exception_date) <= d.appointment_date
+        AND ex.exception_date >= d.appointment_date AND ex.active = true
       JOIN barber_availability s ON s.barber_id = $1 AND s.active = true
         AND s.weekday = EXTRACT(DOW FROM d.appointment_date)::int
-      JOIN services sv ON sv.id = $2 AND sv.active = true
+        AND ex.id IS NULL
       CROSS JOIN LATERAL generate_series(
         (DATE '2000-01-01' + s.start_time),
         (DATE '2000-01-01' + s.end_time) - make_interval(mins => sv.duration_minutes),
+        INTERVAL '15 minutes'
+      ) AS slot(slot_ts)
+      UNION ALL
+      SELECT d.appointment_date,
+        slot.slot_ts::time AS start_time,
+        (slot.slot_ts + make_interval(mins => sv.duration_minutes))::time AS end_time
+      FROM days d
+      JOIN barber_availability_exceptions ex ON ex.barber_id = $1
+        AND COALESCE(ex.start_date, ex.exception_date) <= d.appointment_date
+        AND ex.exception_date >= d.appointment_date AND ex.active = true
+        AND ex.start_time IS NOT NULL AND ex.end_time IS NOT NULL
+      JOIN services sv ON sv.id = $2 AND sv.active = true
+      CROSS JOIN LATERAL generate_series(
+        (DATE '2000-01-01' + ex.start_time),
+        (DATE '2000-01-01' + ex.end_time) - make_interval(mins => sv.duration_minutes),
         INTERVAL '15 minutes'
       ) AS slot(slot_ts)
     )
@@ -75,6 +94,24 @@ export async function createBooking(input: { barberId: number; serviceId: number
   const service = await pool.query('SELECT duration_minutes FROM services WHERE id = $1 AND active = true', [input.serviceId])
   if (!service.rowCount) throw new Error('Serviço indisponível')
   const duration = service.rows[0].duration_minutes
+  const schedule = await pool.query(`
+    SELECT 1
+    FROM barber_availability_exceptions ex
+    WHERE ex.barber_id = $1
+      AND COALESCE(ex.start_date, ex.exception_date) <= $2::date
+      AND ex.exception_date >= $2::date AND ex.active = true
+      AND (ex.start_time IS NULL OR (ex.start_time <= $3::time AND ex.end_time >= ($3::time + make_interval(mins => $4))::time))
+    UNION ALL
+    SELECT 1
+    FROM barber_availability s
+    WHERE s.barber_id = $1 AND s.weekday = EXTRACT(DOW FROM $2::date)::int AND s.active = true
+      AND NOT EXISTS (SELECT 1 FROM barber_availability_exceptions ex WHERE ex.barber_id = $1
+      AND COALESCE(ex.start_date, ex.exception_date) <= $2::date
+      AND ex.exception_date >= $2::date AND ex.active = true)
+      AND s.start_time <= $3::time AND s.end_time >= ($3::time + make_interval(mins => $4))::time
+    LIMIT 1
+  `, [input.barberId, input.date, input.time, duration])
+  if (!schedule.rowCount) throw new Error('booking_outside_availability')
   const overlap = await pool.query(`SELECT 1 FROM bookings b WHERE b.barber_id = $1 AND b.appointment_date = $2 AND b.status = 'confirmed' AND b.start_time < ($3::time + make_interval(mins => $4))::time AND b.end_time > $3::time LIMIT 1`, [input.barberId, input.date, input.time, duration])
   const blocked = await pool.query(`SELECT 1 FROM blockers bl WHERE bl.barber_id = $1 AND bl.blocker_date = $2 AND bl.status = 'active' AND bl.start_time < ($3::time + make_interval(mins => $4))::time AND bl.end_time > $3::time LIMIT 1`, [input.barberId, input.date, input.time, duration])
   if (overlap.rowCount || blocked.rowCount) throw new Error('bookings_unique_slot')

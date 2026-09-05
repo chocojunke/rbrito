@@ -153,15 +153,17 @@ export function AdminCalendar({ bookings, barbers, selectedBarberId, onBarberCha
           <p className="text-xs uppercase tracking-[0.2em] text-primary">Agenda semanal</p>
           <h2 className="mt-1 font-serif text-2xl uppercase">{range}</h2>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-          <label className="sr-only" htmlFor="barber-filter">Filtrar barbeiro</label>
-          <select id="barber-filter" value={selectedBarberId ?? ''} onChange={(event) => onBarberChange(event.target.value ? Number(event.target.value) : null)} className="min-h-11 rounded-full border border-border bg-background px-3 text-sm">
-            <option value="">Todos os barbeiros</option>
-            {barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
-          </select>
-          <button aria-label="Semana anterior" onClick={() => { const next = new Date(week); next.setDate(next.getDate() - 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Semana anterior"><ChevronLeft /></button>
-          <button onClick={() => setWeek(mondayOf(new Date()))} className="h-11 rounded-full border border-border px-4 text-sm">Hoje</button>
-          <button aria-label="Próxima semana" onClick={() => { const next = new Date(week); next.setDate(next.getDate() + 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Próxima semana"><ChevronRight /></button>
+        <div className="flex w-full flex-col gap-3 md:w-auto md:items-end">
+          <span className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Barbeiro</span>
+          <div className="flex max-w-full gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar barbeiro">
+            <button type="button" aria-pressed={selectedBarberId === null} onClick={() => onBarberChange(null)} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm transition-colors ${selectedBarberId === null ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:border-primary'}`}>Todos</button>
+            {barbers.map((barber) => <button type="button" key={barber.id} aria-pressed={selectedBarberId === barber.id} onClick={() => onBarberChange(barber.id)} className={`min-h-11 shrink-0 rounded-full border px-4 text-sm transition-colors ${selectedBarberId === barber.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:border-primary'}`}>{barber.name}</button>)}
+          </div>
+          <div className="flex items-center gap-2">
+            <button aria-label="Semana anterior" onClick={() => { const next = new Date(week); next.setDate(next.getDate() - 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Semana anterior"><ChevronLeft /></button>
+            <button onClick={() => setWeek(mondayOf(new Date()))} className="h-11 rounded-full border border-border px-4 text-sm">Hoje</button>
+            <button aria-label="Próxima semana" onClick={() => { const next = new Date(week); next.setDate(next.getDate() + 7); setWeek(next) }} className="flex size-11 items-center justify-center rounded-full border border-border" title="Próxima semana"><ChevronRight /></button>
+          </div>
         </div>
       </div>
 

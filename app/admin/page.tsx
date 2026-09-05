@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBarbers, getAdminBlockers, getAdminBookings, getAdminSession, updateAdminBooking } from '@/app/actions/admin'
+import { addAdminBlocker, adminLogin, cancelAdminBooking, getAdminBarbers, getAdminBlockers, getAdminBookings, getAdminExceptions, getAdminSession, updateAdminBooking } from '@/app/actions/admin'
+import { AdminExceptions } from '@/components/admin-exceptions'
 import { AdminBookingEditor, type AdminBooking } from '@/components/admin-booking-editor'
 import { AdminCalendar } from '@/components/admin-calendar'
 
 export default function AdminPage() {
   const [bookings, setBookings] = useState<AdminBooking[]>([])
   const [barbers, setBarbers] = useState<{ id: number; name: string; role: string }[]>([])
+  const [exceptions, setExceptions] = useState<Awaited<ReturnType<typeof getAdminExceptions>>>([])
   const [selectedBarberId, setSelectedBarberId] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
@@ -37,9 +39,10 @@ export default function AdminPage() {
   }, [])
 
   async function loadBookings() {
-    const [confirmed, blockers, activeBarbers] = await Promise.all([getAdminBookings(), getAdminBlockers(), getAdminBarbers()])
+    const [confirmed, blockers, activeBarbers, activeExceptions] = await Promise.all([getAdminBookings(), getAdminBlockers(), getAdminBarbers(), getAdminExceptions()])
     setBookings([...confirmed, ...blockers])
     setBarbers(activeBarbers)
+    setExceptions(activeExceptions)
   }
 
   async function addBlocker(date: string, time: string) {
@@ -129,6 +132,8 @@ export default function AdminPage() {
         onCancel={cancel}
         onAddBlocker={addBlocker}
       />
+
+      <AdminExceptions initial={exceptions} barbers={barbers} onChanged={loadBookings} />
 
       {editing && (
         <AdminBookingEditor
