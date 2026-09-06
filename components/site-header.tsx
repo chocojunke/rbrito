@@ -58,7 +58,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-3">
           <GoogleLogin callbackURL="/" />
           {session?.user && (
-            <a href="/conta" className="hidden text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground md:inline-block">
+            <a href="/#agendamentos" className="hidden text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground md:inline-block">
               Os meus agendamentos
             </a>
           )}
@@ -99,7 +99,7 @@ export function SiteHeader() {
             ))}
             {session?.user && (
               <li>
-                <a href="/conta" onClick={() => setOpen(false)} className="block py-3 text-sm font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground">
+                <a href="/#agendamentos" onClick={() => setOpen(false)} className="block py-3 text-sm font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground">
                   Os meus agendamentos
                 </a>
               </li>
