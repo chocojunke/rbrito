@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from '@/lib/auth-client'
 import { Scissors, Menu, X } from 'lucide-react'
 import { site } from '@/lib/site'
 import { cn } from '@/lib/utils'
@@ -16,6 +17,7 @@ const navItems = [
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const { data: session } = useSession()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -54,7 +56,12 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
-          <GoogleLogin />
+          <GoogleLogin callbackURL="/" />
+          {session?.user && (
+            <a href="/conta" className="hidden text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground md:inline-block">
+              Os meus agendamentos
+            </a>
+          )}
           <a
             href={site.bookingUrl}
             className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90 md:inline-block"
@@ -90,6 +97,13 @@ export function SiteHeader() {
                 </a>
               </li>
             ))}
+            {session?.user && (
+              <li>
+                <a href="/conta" onClick={() => setOpen(false)} className="block py-3 text-sm font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground">
+                  Os meus agendamentos
+                </a>
+              </li>
+            )}
             <li className="pt-2">
               <a
                 href={site.bookingUrl}
