@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, Clock3, Euro, Scissors, UserRound } from 
 import { loadAvailableSlots, submitBooking } from '@/app/actions/booking'
 import { BookingDateTime, formatBookingDate } from '@/components/booking-datetime'
 import { formatDuration, formatPrice, type Barber, type Service } from '@/lib/booking-types'
+import { useSession } from '@/lib/auth-client'
 
 type Props = { barbers: Barber[]; services: Service[] }
 type Slot = { date: string; time: string; endTime: string }
@@ -40,7 +41,12 @@ export function BookingFlow({ barbers, services }: Props) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [customer, setCustomer] = useState({ name: '', email: '', phone: '' })
+  const { data: session } = useSession()
   const selectedService = services.find((service) => service.id === serviceId)
+
+  useEffect(() => {
+    if (session?.user) setCustomer((current) => ({ ...current, name: current.name || session.user.name, email: current.email || session.user.email }))
+  }, [session])
 
   function goToNextStep() {
     setStep((current) => Math.min(4, current + 1))

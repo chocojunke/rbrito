@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Scissors, Menu, X } from 'lucide-react'
 import { site } from '@/lib/site'
 import { cn } from '@/lib/utils'
+import { GoogleLogin } from '@/components/google-login'
 
 const navItems = [
   { label: 'Estúdio', href: '#estudio' },
@@ -53,6 +54,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-3">
+          <GoogleLogin />
           <a
             href={site.bookingUrl}
             className="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-primary-foreground transition-opacity hover:opacity-90 md:inline-block"
