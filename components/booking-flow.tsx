@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Clock3, Euro, Scissors, UserRound } from 'lucide-react'
-import { loadAvailableSlots, submitBooking } from '@/app/actions/booking'
+import { loadAvailableSlots, loadMyBookingPhone, submitBooking } from '@/app/actions/booking'
 import { BookingDateTime, formatBookingDate } from '@/components/booking-datetime'
 import { GoogleLogin } from '@/components/google-login'
 import { formatDuration, formatPrice, type Barber, type Service } from '@/lib/booking-types'
@@ -48,6 +48,9 @@ export function BookingFlow({ barbers, services }: Props) {
   useEffect(() => {
     if (session?.user) {
       setCustomer((current) => ({ ...current, name: current.name || session.user.name, email: current.email || session.user.email }))
+      void loadMyBookingPhone().then((phone) => {
+        if (phone) setCustomer((current) => ({ ...current, phone: current.phone || phone }))
+      })
       const saved = sessionStorage.getItem('rbrito-booking-state')
       if (saved) {
         try {
