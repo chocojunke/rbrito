@@ -13,6 +13,7 @@ const trustedOrigins = [
     : []),
   ...(process.env.NODE_ENV === 'production'
     ? [
+        'https://rbrito.vercel.app',
         ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
         ...(process.env.VERCEL_PROJECT_PRODUCTION_URL ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`] : []),
       ]
@@ -21,7 +22,7 @@ const trustedOrigins = [
 
 export const auth = betterAuth({
   database: pool,
-  baseURL: process.env.BETTER_AUTH_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.V0_RUNTIME_URL),
+  baseURL: process.env.BETTER_AUTH_URL ?? 'https://rbrito.vercel.app',
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
