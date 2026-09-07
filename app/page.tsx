@@ -6,6 +6,7 @@ import { Location } from '@/components/location'
 import { Contact } from '@/components/contact'
 import { SiteFooter } from '@/components/site-footer'
 import { BookingFlow } from '@/components/booking-flow'
+import { MyBookingsSection } from '@/components/my-bookings-section'
 import { ensureBookingSchema, getBarbers, getServices, pool } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -61,25 +62,7 @@ export default async function Page({
                 </div>
                 <a href="/conta" className="text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground">Ver todos</a>
               </div>
-              {bookings.length > 0 ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {bookings.map((booking) => (
-                    <article key={booking.id} className="flex flex-wrap items-center justify-between gap-4 border border-border p-5">
-                      <div>
-                        <strong className="block text-base">{booking.service}</strong>
-                        <span className="mt-1 block text-sm text-muted-foreground">{booking.barber}</span>
-                      </div>
-                      <time className="text-sm font-semibold" dateTime={`${booking.date}T${String(booking.time).slice(0, 5)}`}>
-                        {new Date(booking.date).toLocaleDateString('pt-PT')} · {String(booking.time).slice(0, 5)}
-                      </time>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="border border-border p-5 text-muted-foreground">
-                  Ainda não tem agendamentos futuros confirmados.
-                </div>
-              )}
+              <MyBookingsSection initialBookings={bookings} allowCancel />
             </div>
           </section>
         )}

@@ -12,7 +12,7 @@ type Booking = {
   barber: string
 }
 
-export function MyBookingsSection({ initialBookings }: { initialBookings: Booking[] }) {
+export function MyBookingsSection({ initialBookings, allowCancel = false }: { initialBookings: Booking[]; allowCancel?: boolean }) {
   const [bookings, setBookings] = useState(initialBookings)
   const [pending, startTransition] = useTransition()
 
@@ -38,9 +38,11 @@ export function MyBookingsSection({ initialBookings }: { initialBookings: Bookin
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold">{new Date(booking.date).toLocaleDateString('pt-PT')} · {String(booking.time).slice(0, 5)}</span>
-            <button type="button" onClick={() => cancelBooking(booking.id)} disabled={pending} aria-label={`Cancelar marcação de ${booking.service}`} title="Cancelar marcação" className="flex size-11 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-50">
-              <X aria-hidden="true" />
-            </button>
+            {allowCancel && (
+              <button type="button" onClick={() => cancelBooking(booking.id)} disabled={pending} aria-label={`Cancelar marcação de ${booking.service}`} title="Cancelar marcação" className="flex size-11 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-destructive hover:text-destructive disabled:opacity-50">
+                <X aria-hidden="true" />
+              </button>
+            )}
           </div>
         </article>
       )) : <p className="border border-border p-5 text-muted-foreground">Não encontrámos marcações futuras associadas aos seus dados.</p>}
