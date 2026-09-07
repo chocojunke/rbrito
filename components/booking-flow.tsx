@@ -34,10 +34,16 @@ function nextMonthStart(dateKey: string) {
 
 export function BookingFlow({ barbers, services }: Props) {
   const [step, setStep] = useState(1)
-  const canVisitStep = (targetStep: number) => targetStep <= step
   const [barberId, setBarberId] = useState<number | null>(null)
   const [serviceId, setServiceId] = useState<number | null>(null)
   const [selected, setSelected] = useState<Slot | null>(null)
+  const canVisitStep = (targetStep: number) => {
+    if (targetStep === 1) return true
+    if (targetStep === 2) return barberId !== null
+    if (targetStep === 3) return barberId !== null && serviceId !== null
+    if (targetStep === 4) return barberId !== null && serviceId !== null && selected !== null
+    return false
+  }
   const [slots, setSlots] = useState<Slot[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
