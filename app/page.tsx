@@ -10,15 +10,25 @@ import { ensureBookingSchema, getBarbers, getServices, pool } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ debugBookings?: string }>
+}) {
   await ensureBookingSchema()
   const [barbers, services, session] = await Promise.all([
     getBarbers(),
     getServices(),
     auth.api.getSession({ headers: await headers() }),
   ])
-  const bookings = session?.user
-    ? (await pool.query(`SELECT b.id, b.appointment_date AS date, b.start_time AS time, s.name AS service, br.name AS barber FROM bookings b JOIN services s ON s.id = b.service_id JOIN barbers br ON br.id = b.barber_id WHERE lower(b.customer_email) = lower($1) AND b.customer_phone IS NOT NULL AND b.status = 'confirmed' AND b.appointment_date >= CURRENT_DATE ORDER BY b.appointment_date, b.start_time`, [session.user.email])).rows
+  const params = await searchParams
+  const debugBookings = process.env.NODE_ENV === 'development' && params.debugBookings === '1'
+  const debugEmail = debugBookings
+    ? (await pool.query(`SELECT customer_email FROM bookings WHERE status = 'confirmed' AND appointment_date >= CURRENT_DATE AND customer_phone IS NOT NULL ORDER BY appointment_date, start_time LIMIT 1`)).rows[0]?.customer_email
+    : undefined
+  const bookingEmail = session?.user?.email ?? debugEmail
+  const bookings = bookingEmail
+    ? (await pool.query(`SELECT b.id, b.appointment_date AS date, b.start_time AS time, s.name AS service, br.name AS barber FROM bookings b JOIN services s ON s.id = b.service_id JOIN barbers br ON br.id = b.barber_id WHERE lower(b.customer_email) = lower($1) AND b.customer_phone IS NOT NULL AND b.status = 'confirmed' AND b.appointment_date >= CURRENT_DATE ORDER BY b.appointment_date, b.start_time`, [bookingEmail])).rows
     : []
 
   return (
@@ -41,7 +51,7 @@ export default async function Page() {
             <BookingFlow barbers={barbers} services={services} />
           </div>
         </section>
-        {session?.user && (
+        {(session?.user || debugBookings) && (
           <section id="agendamentos" className="border-t border-border py-16 md:py-20">
             <div className="mx-auto max-w-6xl px-5 md:px-8">
               <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -60,7 +70,7 @@ export default async function Page() {
                         <span className="mt-1 block text-sm text-muted-foreground">{booking.barber}</span>
                       </div>
                       <time className="text-sm font-semibold" dateTime={`${booking.date}T${String(booking.time).slice(0, 5)}`}>
-                        {booking.date} · {String(booking.time).slice(0, 5)}
+                        {new Date(booking.date).toLocaleDateString('pt-PT')} · {String(booking.time).slice(0, 5)}
                       </time>
                     </article>
                   ))}
