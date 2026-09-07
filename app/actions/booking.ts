@@ -1,13 +1,22 @@
 'use server'
 
 import crypto from 'node:crypto'
-import { createBooking, getAvailability, getBarbers, getServices, isValidEmail, isValidPhone, sanitizeName, type BookingResponse } from '@/lib/db'
-import { sendBookingEmail } from '@/lib/booking-email'
+import { createBooking, getAvailability, getBarbers, getServices, isValidEmail, isValidPhone, sanitizeName, pool, type BookingResponse } from '@/lib/db'
+import { sendBookingEmail, sendCancellationEmail } from '@/lib/booking-email'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 
 export async function loadBookingOptions() { return { barbers: await getBarbers(), services: await getServices() } }
 export async function loadAvailableSlots(barberId: number, serviceId: number, from: string, to: string) { return getAvailability(barberId, serviceId, from, to) }
+
+export async function cancelMyBooking(bookingId: number) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) return { error: 'Inicie sessão para cancelar a marcação.' }
+  const result = await pool.query(`UPDATE bookings SET status = 'cancelled' WHERE id = $1 AND user_id = $2 AND status = 'confirmed' AND appointment_date >= CURRENT_DATE RETURNING customer_email, customer_name`, [bookingId, session.user.id])
+  if (!result.rowCount) return { error: 'Não foi possível cancelar esta marcação.' }
+  await sendCancellationEmail(result.rows[0].customer_email, result.rows[0].customer_name).catch(() => undefined)
+  return { success: true }
+}
 
 export async function submitBooking(input: { barberId: number; serviceId: number; date: string; time: string; name: string; email: string; phone: string }): Promise<BookingResponse & { token?: string }> {
   const name = sanitizeName(input.name), email = input.email.trim().toLowerCase(), phone = input.phone.trim()
