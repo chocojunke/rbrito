@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Clock3, Euro, Scissors, UserRound } from 'lucide-react'
 import { loadAvailableSlots, submitBooking } from '@/app/actions/booking'
 import { BookingDateTime, formatBookingDate } from '@/components/booking-datetime'
+import { GoogleLogin } from '@/components/google-login'
 import { formatDuration, formatPrice, type Barber, type Service } from '@/lib/booking-types'
+import { useSession } from '@/lib/auth-client'
 
 type Props = { barbers: Barber[]; services: Service[] }
 type Slot = { date: string; time: string; endTime: string }
@@ -40,7 +42,32 @@ export function BookingFlow({ barbers, services }: Props) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [customer, setCustomer] = useState({ name: '', email: '', phone: '' })
+  const { data: session } = useSession()
   const selectedService = services.find((service) => service.id === serviceId)
+
+  useEffect(() => {
+    if (session?.user) {
+      setCustomer((current) => ({ ...current, name: current.name || session.user.name, email: current.email || session.user.email }))
+      const saved = sessionStorage.getItem('rbrito-booking-state')
+      if (saved) {
+        try {
+          const state = JSON.parse(saved) as { step?: number; barberId?: number; serviceId?: number; selected?: Slot | null; customer?: typeof customer }
+          if (state.barberId && state.serviceId && state.selected) {
+            setBarberId(state.barberId)
+            setServiceId(state.serviceId)
+            setSelected(state.selected)
+            setCustomer((current) => ({ ...current, ...state.customer, name: state.customer?.name || session.user.name, email: state.customer?.email || session.user.email }))
+            setStep(4)
+          }
+        } catch { /* Ignore stale booking state. */ }
+        sessionStorage.removeItem('rbrito-booking-state')
+      }
+    }
+  }, [session])
+
+  function preserveBookingBeforeLogin() {
+    sessionStorage.setItem('rbrito-booking-state', JSON.stringify({ step, barberId, serviceId, selected, customer }))
+  }
 
   function goToNextStep() {
     setStep((current) => Math.min(4, current + 1))
@@ -123,7 +150,7 @@ export function BookingFlow({ barbers, services }: Props) {
         <BookingDateTime slots={slots} selected={selected} onSelect={handleSlotSelect} loading={loading} />
       </section>
     )}
-    {step === 4 && <section><div className="mb-7"><p className="mb-2 text-sm uppercase tracking-widest text-primary">Passo 04</p><h1 className="font-serif text-4xl uppercase md:text-5xl">Os seus dados</h1><p className="mt-3 text-muted-foreground">{selectedService?.name} · {selected?.date && formatBookingDate(selected.date)} às {selected?.time}</p></div><form onSubmit={handleSubmit} className="flex flex-col gap-5"><label className="flex flex-col gap-2 text-sm font-semibold">Nome<input required value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} className="rounded-sm border border-input bg-background px-4 py-3 font-normal outline-none focus:border-primary" placeholder="O seu nome" /></label><label className="flex flex-col gap-2 text-sm font-semibold">Email<input required type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} className="rounded-sm border border-input bg-background px-4 py-3 font-normal outline-none focus:border-primary" placeholder="nome@email.com" /></label><label className="flex flex-col gap-2 text-sm font-semibold">Contacto<input required type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} className="rounded-sm border border-input bg-background px-4 py-3 font-normal outline-none focus:border-primary" placeholder="+351 900 000 000" /></label><p className="text-xs text-muted-foreground">Os seus dados são usados apenas para gerir esta marcação.</p></form></section>}
+    {step === 4 && <section><div className="mb-7"><p className="mb-2 text-sm uppercase tracking-widest text-primary">Passo 04</p><h1 className="font-serif text-4xl uppercase md:text-5xl">Os seus dados</h1><p className="mt-3 text-muted-foreground">{selectedService?.name} · {selected?.date && formatBookingDate(selected.date)} às {selected?.time}</p></div><div className="mb-6 flex flex-col gap-3 rounded-sm border border-border bg-secondary/30 p-4"><p className="text-sm text-muted-foreground">Já tem conta? Entre com Google para preencher os seus dados automaticamente.</p><GoogleLogin callbackURL="/#booking" onBeforeSignIn={preserveBookingBeforeLogin} /></div><form onSubmit={handleSubmit} className="flex flex-col gap-5"><label className="flex flex-col gap-2 text-sm font-semibold">Nome<input required value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} className="rounded-sm border border-input bg-background px-4 py-3 font-normal outline-none focus:border-primary" placeholder="O seu nome" /></label><label className="flex flex-col gap-2 text-sm font-semibold">Email<input required type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} className="rounded-sm border border-input bg-background px-4 py-3 font-normal outline-none focus:border-primary" placeholder="nome@email.com" /></label><label className="flex flex-col gap-2 text-sm font-semibold">Contacto<input required type="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} className="rounded-sm border border-input bg-background px-4 py-3 font-normal outline-none focus:border-primary" placeholder="+351 900 000 000" /></label><p className="text-xs text-muted-foreground">Os seus dados são usados apenas para gerir esta marcação.</p></form></section>}
     {error && <p role="alert" className="mt-5 text-sm text-destructive">{error}</p>}
     <div className="mt-10 flex justify-between gap-3"><button type="button" onClick={() => setStep(Math.max(1, step - 1))} disabled={step === 1} className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-semibold uppercase tracking-wider disabled:opacity-30"><ArrowLeft size={16} />Anterior</button>{step < 4 ? <button type="button" onClick={() => setStep(step + 1)} disabled={!canNext || loading} className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-40">Continuar<ArrowRight size={16} /></button> : <button type="button" onClick={() => document.querySelector('form')?.requestSubmit()} disabled={loading} className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-40">{loading ? 'A confirmar...' : 'Confirmar marcação'}<Check size={16} /></button>}</div>
   </div>

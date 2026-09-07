@@ -90,7 +90,7 @@ export async function getAvailability(barberId: number, serviceId: number, from:
   return result.rows
 }
 
-export async function createBooking(input: { barberId: number; serviceId: number; date: string; time: string; name: string; email: string; phone: string; cancellationTokenHash?: string }) {
+export async function createBooking(input: { barberId: number; serviceId: number; date: string; time: string; name: string; email: string; phone: string; userId?: string; cancellationTokenHash?: string }) {
   const service = await pool.query('SELECT duration_minutes FROM services WHERE id = $1 AND active = true', [input.serviceId])
   if (!service.rowCount) throw new Error('Serviço indisponível')
   const duration = service.rows[0].duration_minutes
@@ -116,9 +116,9 @@ export async function createBooking(input: { barberId: number; serviceId: number
   const blocked = await pool.query(`SELECT 1 FROM blockers bl WHERE bl.barber_id = $1 AND bl.blocker_date = $2 AND bl.status = 'active' AND bl.start_time < ($3::time + make_interval(mins => $4))::time AND bl.end_time > $3::time LIMIT 1`, [input.barberId, input.date, input.time, duration])
   if (overlap.rowCount || blocked.rowCount) throw new Error('bookings_unique_slot')
   const result = await pool.query(`INSERT INTO bookings
-    (barber_id, service_id, appointment_date, start_time, end_time, customer_name, customer_email, customer_phone, cancellation_token_hash)
-    VALUES ($1, $2, $3, $4, ($4::time + make_interval(mins => $5))::time, $6, $7, $8, $9)
-    RETURNING id`, [input.barberId, input.serviceId, input.date, input.time, duration, input.name, input.email, input.phone, input.cancellationTokenHash ?? null])
+    (barber_id, service_id, appointment_date, start_time, end_time, customer_name, customer_email, customer_phone, user_id, cancellation_token_hash)
+    VALUES ($1, $2, $3, $4, ($4::time + make_interval(mins => $5))::time, $6, $7, $8, $9, $10)
+    RETURNING id`, [input.barberId, input.serviceId, input.date, input.time, duration, input.name, input.email, input.phone, input.userId ?? null, input.cancellationTokenHash ?? null])
   return result.rows[0].id as number
 }
 
