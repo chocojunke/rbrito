@@ -9,6 +9,13 @@ import { headers } from 'next/headers'
 export async function loadBookingOptions() { return { barbers: await getBarbers(), services: await getServices() } }
 export async function loadAvailableSlots(barberId: number, serviceId: number, from: string, to: string) { return getAvailability(barberId, serviceId, from, to) }
 
+export async function loadMyBookingPhone() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) return null
+  const result = await pool.query(`SELECT customer_phone FROM bookings WHERE user_id = $1 AND customer_phone IS NOT NULL AND customer_phone <> '' ORDER BY id DESC LIMIT 1`, [session.user.id])
+  return result.rows[0]?.customer_phone ?? null
+}
+
 export async function cancelMyBooking(bookingId: number) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return { error: 'Inicie sessão para cancelar a marcação.' }
